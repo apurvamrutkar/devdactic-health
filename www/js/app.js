@@ -99,7 +99,15 @@ angular.module('starter', ['ionic', 'ngCordova'])
     };
 
     $scope.heartData = "";
-    var db = $cordovaSQLite.openDB({ name: "my.heartDb" });
+    var db;
+    if (window.cordova) {
+        db = $cordovaSQLite.openDB({ name: "my.db" }); //device
+        console.log("IOS");
+    } else {
+        db = window.openDatabase("my.db", '1', 'my', 1024 * 1024 * 100); // browser
+        console.log("browser");
+
+    }
 
     function streamHeart() {
         //alert($scope.abc);
