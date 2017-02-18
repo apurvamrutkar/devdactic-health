@@ -25,17 +25,17 @@ angular.module('starter', ['ionic', 'ngCordova'])
             tx.executeSql('CREATE TABLE IF NOT EXISTS HeartRateData (timestamp, fullDateString, heartRate, stepCount, isResting)');
          
         }, function (error) {
-            alert('Cannot creatr table ERROR: ' + error.message);
+            console.log('Cannot creatr table ERROR: ' + error.message);
         }, function () {
-            alert('created table OK');
+            console.log('created table OK');
         });
 
         db.transaction(function(tx) {
             tx.executeSql('CREATE TABLE IF NOT EXISTS heartRangeData (id integer, start_age integer, end_age integer, is_rest boolean, max_heart_rate integer, min_heart_rate integer, state_no integer)');
         }, function (error) {
-            alert('Cannot creatr table ERROR: ' + error.message);
+            console.log('Cannot creatr table ERROR: ' + error.message);
         }, function () {
-            alert('created table OK');
+            console.log('created table OK');
         });
 
         db.transaction(function(tx) {
@@ -138,13 +138,23 @@ angular.module('starter', ['ionic', 'ngCordova'])
         db.transaction(function (tx) {
             
             tx.executeSql('SELECT count(*) AS mycount FROM HeartRateData WHERE timestamp=' + timestamp, [], function (tx, rs) {
-                console.log('Record count (expected to be 2): ' + rs.rows.item(0).mycount);
+                //console.log('Record count (expected to be 2): ' + rs.rows.item(0).mycount);
                 if (rs.rows.item(0).mycount == 0) {
-                    tx.executeSql('INSERT INTO HeartRateData VALUES (timestamp, fullDateString, heartRate, stepCount, isResting)',
+                    tx.executeSql('INSERT INTO HeartRateData VALUES (?,?,?,?,?)',
                        [timestamp, fullDate, heartRate, stepCount, isResting]);
                 }
                 else {
-                    //update
+                    console.log('already exists');
+                    var query = "UPDATE HeartRateData SET heartRate = ? WHERE timestamp = ?";
+
+                    tx.executeSql(query, [heartRate+1, timestamp],
+                    function (tx, res) {
+                        //console.log("insertId: " + res.insertId);
+                        //c/onsole.log("rowsAffected: " + res.rowsAffected);
+                    },
+                    function (tx, error) {
+                        //console.log('UPDATE error: ' + error.message);
+                    });
                 }
             }, function (tx, error) {
                 console.log('SELECT error: ' + error.message);
@@ -168,7 +178,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
             timeStamp = formatDateTime(tmp.startDate);
             var obj = {
                 timeStamp: timeStamp.getTime(),
-                fullDate: c.toString(),
+                fullDate: timeStamp.toString(),
                 heartRate: tmp.quantity,
                 sampleCount: 1
             }
@@ -229,7 +239,37 @@ angular.module('starter', ['ionic', 'ngCordova'])
         alert(v);
     }
 
+    $scope.insertData = function () {
+        var json = JSON.parse('[{"quantity":57,"endDate":"2017-02-18T12:00:02-05:00","startDate":"2017-02-18T12:00:02-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":72,"endDate":"2017-02-18T12:00:09-05:00","startDate":"2017-02-18T12:00:09-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:00:055-05:00","startDate":"2017-02-18T12:00:55-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:01:22-05:00","startDate":"2017-02-18T12:02:22-05:00","UUID":"70C2BA2A -BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}}]');
+        var x = parseHeartData(json);
+        addData(x);
+    }
+    function addData(x) {
+        for (var i = 0; i < x.length; i++) {
+            var obj = x[i];
+            InsertHeartData(obj.timeStamp, obj.fullDate, obj.heartRate, 0, 1);
+        }
+        getData();
+    }
 
+    function getData() {
+        db.transaction(function (tx) {
 
+            var query = "SELECT * FROM HeartRateData";
 
+            tx.executeSql(query, [], function (tx, resultSet) {
+
+                for (var x = 0; x < resultSet.rows.length; x++) {
+                    console.log("Time stamp: " + resultSet.rows.item(x).timestamp + " :: Heart Rate " + resultSet.rows.item(x).heartRate);
+                }
+            },
+            function (tx, error) {
+                console.log('SELECT error: ' + error.message);
+            });
+        }, function (error) {
+            console.log('transaction error: ' + error.message);
+        }, function () {
+            console.log('transaction ok');
+        });
+    }
 });
