@@ -6,8 +6,12 @@
 
 angular.module('starter', ['ionic', 'ngCordova'])
 
-.run(function($ionicPlatform, $cordovaHealthKit) {
-  $ionicPlatform.ready(function() {
+.run(function ($ionicPlatform, $cordovaHealthKit, $cordovaSQLite) {
+    $ionicPlatform.ready(function () {
+
+        //create database if not exist
+       
+
     if(window.cordova && window.cordova.plugins.Keyboard) {
       // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
       // for form inputs)
@@ -40,11 +44,25 @@ angular.module('starter', ['ionic', 'ngCordova'])
     
   });
 })
-.controller('AppCtrl', function($scope, $cordovaHealthKit) {
+.controller('AppCtrl', function ($scope, $cordovaHealthKit, $cordovaSQLite) {
         $scope.body = {
             height: ''
         };
-     
+        var db = $cordovaSQLite.openDB({ name: "my.heartDb" });
+        //private functions
+        function InsertHeartData(timestamp,heartRate,stepCount,isResting) {
+            db.transaction(function (tx) {
+                tx.executeSql('CREATE TABLE IF NOT EXISTS HeartRateData (timestamp, heartRate, stepCount, isResting)');
+                tx.executeSql('INSERT INTO HeartRateData VALUES (?,?,?,?)', [timestamp, heartRate, stepCount, isResting]);
+               
+            }, function (error) {
+                console.log('Transaction ERROR: ' + error.message);
+            }, function () {
+                console.log('Populated database OK');
+            });
+        }
+
+        //scope functions
         $scope.saveHeight = function() {
             $cordovaHealthKit.saveHeight($scope.body.height, 'cm').then(function(v) {
             }, function(err) {
