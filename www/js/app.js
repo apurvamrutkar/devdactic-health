@@ -3,14 +3,21 @@
 // angular.module is a global place for creating, registering and retrieving Angular modules
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
-
+var db = null;
 angular.module('starter', ['ionic', 'ngCordova'])
 
 .run(function ($ionicPlatform, $cordovaHealthKit, $cordovaSQLite) {
     $ionicPlatform.ready(function () {
 
         //create database if not exist
-        var db = $cordovaSQLite.openDB({ name: "my.heartDb" });
+        if (window.cordova) {
+          db = $cordovaSQLite.openDB({ name: "my.db" }); //device
+         console.log("IOS");
+        }else{
+          db = window.openDatabase("my.db", '1', 'my', 1024 * 1024 * 100); // browser
+          console.log("browser");
+
+        }
 
         //db schema creation
 
@@ -20,9 +27,37 @@ angular.module('starter', ['ionic', 'ngCordova'])
         }, function (error) {
             alert('Cannot creatr table ERROR: ' + error.message);
         }, function () {
-            console.log('created table OK');
+            alert('created table OK');
         });
 
+        db.transaction(function(tx) {
+            tx.executeSql('CREATE TABLE IF NOT EXISTS heartRangeData (id integer, start_age integer, end_age integer, is_rest boolean, max_heart_rate integer, min_heart_rate integer, state_no integer)');
+        }, function (error) {
+            alert('Cannot creatr table ERROR: ' + error.message);
+        }, function () {
+            alert('created table OK');
+        });
+
+        db.transaction(function(tx) {
+            var request = new XMLHttpRequest();
+           request.open("GET", "../heart_data.json", false);
+           request.send(null)
+           var data = JSON.parse(request.responseText);
+           for(var i=0;i<data.length;i++){
+                tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
+            }
+        }, function (error) {
+            alert('Cannot insert into heartRangeData ERROR: ' + error.message);
+        }, function () {
+            alert('inserted into table OK');
+        });
+
+        var query = "Select * from heartRangeData LIMIT 10";
+        $cordovaSQLite.execute(db, query).then(function(res) {
+          console.log(res);
+        }, function (err) {
+          console.error(err);
+        });
 
         if (window.cordova && window.cordova.plugins.Keyboard) {
             // Hide the accessory bar by default (remove this to show the accessory bar above the keyboard
