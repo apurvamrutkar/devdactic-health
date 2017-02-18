@@ -15,7 +15,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         //db schema creation
 
         db.transaction(function (tx) {
-            tx.executeSql('CREATE TABLE IF NOT EXISTS HeartRateData (timestamp, heartRate, stepCount, isResting)');
+            tx.executeSql('CREATE TABLE IF NOT EXISTS HeartRateData (timestamp, fullDateString, heartRate, stepCount, isResting)');
          
         }, function (error) {
             alert('Cannot creatr table ERROR: ' + error.message);
@@ -91,9 +91,24 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
    
     //private functions
-    function InsertHeartData(timestamp, heartRate, stepCount, isResting) {
+    function InsertHeartData(timestamp,fullDate, heartRate, stepCount, isResting) {
         db.transaction(function (tx) {
-             tx.executeSql('INSERT INTO HeartRateData VALUES (?,?,?,?)', [timestamp, heartRate, stepCount, isResting]);
+            
+            tx.executeSql('SELECT count(*) AS mycount FROM HeartRateData WHERE timestamp=' + timestamp, [], function (tx, rs) {
+                console.log('Record count (expected to be 2): ' + rs.rows.item(0).mycount);
+                if (rs.rows.item(0).mycount == 0) {
+                    tx.executeSql('INSERT INTO HeartRateData VALUES (timestamp, fullDateString, heartRate, stepCount, isResting)',
+                       [timestamp, fullDate, heartRate, stepCount, isResting]);
+                }
+                else {
+                    //update
+                }
+            }, function (tx, error) {
+                console.log('SELECT error: ' + error.message);
+            });
+            
+
+           
 
         }, function (error) {
             console.log('Transaction ERROR: ' + error.message);
