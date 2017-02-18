@@ -137,7 +137,53 @@ angular.module('starter', ['ionic', 'ngCordova'])
         });
     }
 
-    function parseHeartData() {
+    function parseHeartData(arrHeartData) {
+        var len = arrHeartData.length;
+        var relevantData = [];
+        for (var i = 0; i < len; i++) {
+            var tmp = arrHeartData[i];
+            timeStamp = formatDateTime(tmp.startDate);
+            var obj = {
+                timeStamp: timeStamp.getTime(),
+                fullDate: c.toString(),
+                heartRate: tmp.quantity,
+                sampleCount: 1
+            }
+            relevantData.push(obj);
+        }
+        return normalizeHeartRate(relevantData);
+    }
+
+    function normalizeHeartRate(data) {
+        var len = data.length;
+        var obj = {};
+        var tmp;
+        var stamp;
+        for (var i = 0; i < len; i++) {
+            tmp = data[i];
+            stamp = tmp.timeStamp;
+            if (obj[stamp] == null) {
+                obj[stamp] = tmp;
+            }
+            else {
+                var count = obj[stamp].sampleCount;
+                var hRate = (count * obj[stamp].heartRate + tmp.heartRate) / (count + 1);
+                obj[stamp].heartRate = hRate;
+                obj[stamp].sampleCount = count + 1;
+            }
+        }
+        var normalizedData = [];
+        for (var key in obj) {
+            normalizedData.push(obj[key]);
+        }
+        return normalizedData;
+    }
+
+    function formatDateTime(date) {
+        var c = new Date(date);
+        c.setSeconds(0);
+        return c;
+        //return c.getFullYear() + "-" + c.getMonth() + "-" + c.getDate() + "T" + c.getHours() + ":" + c.getMinutes() + ":0";
 
     }
 
@@ -147,8 +193,6 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
     };
 
-    
-
     $scope.onSuccessHeartRate = function (v) {
         var len = v.length;
         $scope.heartData = v;
@@ -157,8 +201,6 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
         heartDiv.innerHTML = JSON.stringify($scope.heartData);
     }
-
-   
 
     $scope.onErrorHeartRate = function (v) {
         alert(v);
