@@ -138,7 +138,26 @@ angular.module('starter', ['ionic', 'ngCordova'])
             $scope.onErrorHeartRate
         );
     }
+    function streamStepsData() {
+        var startDate;
+        if (localStorage.getItem("stepsStartDate") == null || localStorage.getItem("stepsStartDate") == undefined) {
+            startDate = 2 * 60 * 60 * 1000;
+            localStorage.setItem("stepsStartDate", startDate);
+        } else {
+            startDate = localStorage.getItem("stepsStartDate");
+            localStorage.setItem("stepsStartDate", new Date().getTime());
 
+        }
+        window.plugins.healthkit.querySampleType({
+            'startDate': new Date(new Date().getTime() - startDate), // two days ago
+            'endDate': new Date(), // now
+            'sampleType': 'HKQuantityTypeIdentifierStepCount',
+            'unit': 'count' // make sure this is compatible with the sampleType
+        },
+            $scope.onSuccessStepCount,
+            $scope.onErrorStepCount
+        );
+    }
    
     //private functions
     function InsertHeartData(timestamp,fullDate, heartRate, stepCount, isResting) {
@@ -229,6 +248,105 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
     }
 
+    function InsertStepsData(timestamp, fullDate, stepCount, isResting) {
+        db.transaction(function (tx) {
+
+            tx.executeSql('SELECT count(*) AS mycount FROM HeartRateData WHERE timestamp=' + timestamp, [], function (tx, rs) {
+
+                if (rs.rows.item(0).mycount == 0) {
+                    tx.executeSql('INSERT INTO HeartRateData VALUES (?,?,?,?,?)',
+                       [timestamp, fullDate, 0, stepCount, isResting]);
+                }
+                else {
+                    console.log('already exists');
+                    var query = "UPDATE HeartRateData SET stepCount = ?, isResting = ? WHERE timestamp = ?";
+
+                    tx.executeSql(query, [stepCount, isResting, timestamp],
+                    function (tx, res) {
+                        //console.log("insertId: " + res.insertId);
+                        //c/onsole.log("rowsAffected: " + res.rowsAffected);
+                    },
+                    function (tx, error) {
+                        //console.log('UPDATE error: ' + error.message);
+                    });
+                }
+            }, function (tx, error) {
+                console.log('SELECT error: ' + error.message);
+            });
+
+
+
+
+        }, function (error) {
+            console.log('Transaction ERROR: ' + error.message);
+        }, function () {
+            console.log('Populated database OK');
+        });
+    }
+
+    function parseStepsData(arrStepsData) {
+        var len = arrStepsData.length;
+        var relevantData = [];
+        var avgSteps = 0;
+        for (var i = 0; i < len; i++) {
+            var tmp = arrStepsData[i];
+            timeStamp = formatStepDateTime(tmp.startDate, tmp.endDate);
+            avgSteps = tmp.quantity / timeStamp.length;
+            for (var j = 0; j < timeStamp.length; j++) {
+                var obj = {
+                    timeStamp: timeStamp[j].getTime(),
+                    fullDate: timeStamp[j].toString(),
+                    stepCount: avgSteps,
+                    sampleCount: 1
+                }
+                relevantData.push(obj);
+            }
+        }
+        return normalizeStepsdata(relevantData);
+    }
+
+    function normalizeStepsdata(data) {
+        var len = data.length;
+        var obj = {};
+        var tmp;
+        var stamp;
+        for (var i = 0; i < len; i++) {
+            tmp = data[i];
+            stamp = tmp.timeStamp;
+            if (obj[stamp] == null) {
+                obj[stamp] = tmp;
+            }
+            else {               
+              
+                obj[stamp].stepCount = obj[stamp].stepCount + tmp.stepCount;
+               
+            }
+        }
+        var normalizedData = [];
+        for (var key in obj) {
+            normalizedData.push(obj[key]);
+        }
+        return normalizedData;
+    }
+
+    function formatStepsDateTime(startDate,endDate) {
+        var sd = new Date(startDate);
+        var ed = new Date(endDate);
+        sd.setSeconds(0);
+        ed.setMinutes(ed.setMinutes() + 1);
+        ed.setSeconds(0);
+        var noOfMins = (ed.getTime() - sd.getTime()) / 60;
+        var timestamps = [];
+
+        for (var i = 0; i < noOfMins; i++) {
+            timestamps.push(sd);
+            sd = new Date(sd.setMinutes(sd.getMinutes() + 1));
+        }
+
+        return timestamps;
+        //return c.getFullYear() + "-" + c.getMonth() + "-" + c.getDate() + "T" + c.getHours() + ":" + c.getMinutes() + ":0";
+
+    }
     //scope functions
     $scope.getHeartRate = function () {
         setInterval(streamHeart, 2000);
@@ -248,6 +366,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         alert(v);
     }
 
+<<<<<<< HEAD
     $scope.getCurrentHeartState = function(){
         var query = "Select * from HeartRateData order by timestamp DESC limit 1;";
         var currentRate;
@@ -357,18 +476,49 @@ angular.module('starter', ['ionic', 'ngCordova'])
     }
 
 
+=======
+    $scope.onSuccessStepCount = function (v) {
+        var len = v.length;
+        $scope.stepsData = v;
+
+        var stepsDiv = document.getElementById("steps");
+
+        stepsDiv.innerHTML = JSON.stringify($scope.stepsData);
+    }
+
+    $scope.onErrorStepCount = function (v) {
+        alert(v);
+    }
+
+>>>>>>> 817178fdb66d78de2202744882a6bd7b3fee3bd0
     $scope.insertData = function () {
         var json = JSON.parse('[{"quantity":57,"endDate":"2017-02-18T12:00:02-05:00","startDate":"2017-02-18T12:00:02-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":72,"endDate":"2017-02-18T12:00:09-05:00","startDate":"2017-02-18T12:00:09-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:00:055-05:00","startDate":"2017-02-18T12:00:55-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:01:22-05:00","startDate":"2017-02-18T12:02:22-05:00","UUID":"70C2BA2A -BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}}]');
         var x = parseHeartData(json);
-        addData(x);
+        addHeartData(x);
     }
-    function addData(x) {
+    function addHeartData(x) {
         for (var i = 0; i < x.length; i++) {
             var obj = x[i];
             InsertHeartData(obj.timeStamp, obj.fullDate, obj.heartRate, 0, 1);
         }
         getData();
     }
+
+    function addStepsData(x) {
+        for (var i = 0; i < x.length; i++) {
+            var obj = x[i];
+            var isResting;
+            if (obj.stepCount > 25) {
+                isResting = 0;
+            }
+            else {
+                isResting = 1;
+            }
+            InsertStepsData(obj.timeStamp, obj.fullDate, obj.stepCount, isResting);
+        }
+        
+    }
+
 
     function getData() {
         db.transaction(function (tx) {
