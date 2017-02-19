@@ -82,6 +82,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         if (window.StatusBar) {
             StatusBar.styleDefault();
         }
+        alert("above permission");
         $cordovaHealthKit.isAvailable().then(function (yes) {
             // HK is available
             alert("in check for permission");
