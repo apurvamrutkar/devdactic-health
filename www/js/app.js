@@ -8,13 +8,11 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
 .run(function ($ionicPlatform, $cordovaHealthKit, $cordovaSQLite) {
     $ionicPlatform.ready(function () {
-
         //create database if not exist
         if (window.cordova) {
-          db = $cordovaSQLite.openDB({ name: "my.db" }); //device
-         console.log("IOS");
+          db = $cordovaSQLite.openDB({ name: 'my.db', location: 'default' }); //device
         }else{
-          db = window.openDatabase("my.db", '1', 'my', 1024 * 1024 * 100); // browser
+          db = window.openDatabase('my.db', '1', 'my', 1024 * 1024 * 100); // browser
           console.log("browser");
 
         }
@@ -27,7 +25,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         }, function (error) {
             alert('Cannot creatr table ERROR: ' + error.message);
         }, function () {
-            alert('created table OK');
+            console.log('created table OK');
         });
 
         db.transaction(function(tx) {
@@ -35,21 +33,25 @@ angular.module('starter', ['ionic', 'ngCordova'])
         }, function (error) {
             alert('Cannot creatr table ERROR: ' + error.message);
         }, function () {
-            alert('created table OK');
+            console.log('created table OK');
         });
 
         db.transaction(function(tx) {
             var request = new XMLHttpRequest();
-           request.open("GET", "../heart_data.json", false);
-           request.send(null)
-           var data = JSON.parse(request.responseText);
-           for(var i=0;i<data.length;i++){
-                tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
-            }
+           request.open("GET", "heart_data.json", false);
+           request.send(null);
+           //$http.get("../heart_data.json").success(function (res) {
+            alert(request.responseText)
+               var data = sheet.sheet1;
+               alert(data[0]);
+               for(var i=0;i<data.length;i++){
+                    tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
+                }
+            //});
         }, function (error) {
             alert('Cannot insert into heartRangeData ERROR: ' + error.message);
         }, function () {
-            alert('inserted into table OK');
+            console.log('inserted into table OK');
         });
 
         var query = "Select * from heartRangeData LIMIT 10";
@@ -179,6 +181,8 @@ angular.module('starter', ['ionic', 'ngCordova'])
         return normalizedData;
     }
 
+
+
     function formatDateTime(date) {
         var c = new Date(date);
         c.setSeconds(0);
@@ -206,7 +210,17 @@ angular.module('starter', ['ionic', 'ngCordova'])
         alert(v);
     }
 
-
+    $scope.getCurrentHeartState = function(){
+        var query = "Select * from HeartRateData order by timestamp DESC limit 1;";
+        $cordovaSQLite.execute(db, query).then(function(res) {
+          console.log(res);
+          var getCondition = "Select * from heartRangeData where start_age<="+24+" and end_age>="+24+" and is_rest="res.isResting+" and max_heart_rate>="res.heartRate+" and min_heart_rate<="+res.heartRate";";
+          $cordovaSQLite.execute(db, query).then(function(data) {
+            return data.state_no;
+        }, function (err) {
+          console.error(err);
+        });        
+    }
 
 
 });
