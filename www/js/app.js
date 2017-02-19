@@ -74,7 +74,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         }
         $cordovaHealthKit.isAvailable().then(function (yes) {
             // HK is available
-            var permissions = ['HKQuantityTypeIdentifierHeight'];
+            var permissions = ['HKQuantityTypeIdentifierHeight', HKQuantityTypeIdentifierHeartRate];
 
             $cordovaHealthKit.requestAuthorization(
                 permissions, // Read permission
@@ -351,6 +351,8 @@ angular.module('starter', ['ionic', 'ngCordova'])
         var heartDiv = document.getElementById("heartRate");
 
         heartDiv.innerHTML = JSON.stringify($scope.heartData);
+
+        parseHeartData(v);
     }
 
     $scope.onErrorHeartRate = function (v) {
@@ -364,6 +366,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
         var stepsDiv = document.getElementById("steps");
 
         stepsDiv.innerHTML = JSON.stringify($scope.stepsData);
+        parseStepsData(v);
     }
 
     $scope.onErrorStepCount = function (v) {
