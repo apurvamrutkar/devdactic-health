@@ -14,12 +14,14 @@ angular.module('starter', ['ionic', 'ngCordova'])
 .run(function ($ionicPlatform, $cordovaHealthKit, $cordovaSQLite) {
     $ionicPlatform.ready(function () {
         //create database if not exist
+        var filename;
         if (window.cordova) {
           db = $cordovaSQLite.openDB({ name: 'my.db', location: 'default' }); //device
+          filename="heart_data.json";
         }else{
           db = window.openDatabase('my.db', '1', 'my', 1024 * 1024 * 100); // browser
           console.log("browser");
-
+          filename="../heart_data.json";
         }
 
         //db schema creation
@@ -43,12 +45,13 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
         db.transaction(function(tx) {
             var request = new XMLHttpRequest();
-           request.open("GET", "heart_data.json", false);
+            
+
+           request.open("GET", filename, false);
            request.send(null);
            //$http.get("../heart_data.json").success(function (res) {
-            alert(request.responseText)
-               var data = sheet.sheet1;
-               alert(data[0]);
+               var data = JSON.parse(request.responseText).sheet1;
+      
                for(var i=0;i<data.length;i++){
                     tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
                 }
@@ -81,44 +84,47 @@ angular.module('starter', ['ionic', 'ngCordova'])
         }
         $cordovaHealthKit.isAvailable().then(function (yes) {
             // HK is available
-            var permissions = ['HKQuantityTypeIdentifierHeight', HKQuantityTypeIdentifierHeartRate];
+            alert("in check for permission");
+            var permissions = ['HKQuantityTypeIdentifierHeight', 'HKQuantityTypeIdentifierHeartRate', 'HKQuantityTypeIdentifierStepCount'];
 
             $cordovaHealthKit.requestAuthorization(
                 permissions, // Read permission
                 permissions // Write permission
             ).then(function (success) {
                 // store that you have permissions
+                alert("success in permission");
             }, function (err) {
                 // handle error
+                alert("error in permissions:"+err);
             });
 
         }, function (no) {
             // No HK available
+            alert("No HK available");
         });
 
     });
 })
-.controller('AppCtrl', function ($scope, $cordovaHealthKit, $cordovaSQLite) {
 
+.controller('AppCtrl', function ($scope, $cordovaHealthKit, $cordovaSQLite) {
     // variable declaration
     $scope.body = {
         height: ''
     };
 
     $scope.heartData = "";
-    var db;
+    /*var db;
     if (window.cordova) {
-        db = $cordovaSQLite.openDB({ name: "my.db" }); //device
+        db = $cordovaSQLite.openDB({ name: "my.db",  location: 'default' }); //device
         console.log("IOS");
     } else {
         db = window.openDatabase("my.db", '1', 'my', 1024 * 1024 * 100); // browser
         console.log("browser");
 
-    }
+    }*/
 
     function streamHeart() {
         //alert($scope.abc);
-        
         var startDate;
         if (localStorage.getItem("startDate") == null || localStorage.getItem("startDate") == undefined) {
             startDate = 2 * 60 * 60 * 1000;
@@ -128,6 +134,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
             localStorage.setItem("startDate", new Date().getTime());
 
         }
+        
         window.plugins.healthkit.querySampleType({
             'startDate': new Date(new Date().getTime() - startDate), // two days ago
             'endDate': new Date(), // now
@@ -138,6 +145,8 @@ angular.module('starter', ['ionic', 'ngCordova'])
             $scope.onErrorHeartRate
         );
     }
+
+
     function streamStepsData() {
         var startDate;
         if (localStorage.getItem("stepsStartDate") == null || localStorage.getItem("stepsStartDate") == undefined) {
@@ -148,6 +157,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
             localStorage.setItem("stepsStartDate", new Date().getTime());
 
         }
+        alert('startDate');
         window.plugins.healthkit.querySampleType({
             'startDate': new Date(new Date().getTime() - startDate), // two days ago
             'endDate': new Date(), // now
@@ -349,14 +359,16 @@ angular.module('starter', ['ionic', 'ngCordova'])
     }
     //scope functions
     $scope.getHeartRate = function () {
+        alert('in getHeartRate');
         setInterval(streamHeart, 2000);
 
     };
 
     $scope.onSuccessHeartRate = function (v) {
+        alert(v);
         var len = v.length;
         $scope.heartData = v;
-
+        
         var heartDiv = document.getElementById("heartRate");
 
         heartDiv.innerHTML = JSON.stringify($scope.heartData);
@@ -378,7 +390,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
           console.error(err);
         });  
         var currentState;
-        var getCondition = "Select * from heartRangeData where start_age<="+24+" and end_age>="+24+" and is_rest="currentRate.isResting+" and max_heart_rate>="currentRate.heartRate+" and min_heart_rate<="+currentRate.heartRate";";
+        var getCondition = "Select * from heartRangeData where start_age<=24 and end_age>=24 and is_rest="+currentRate.isResting+" and max_heart_rate>="+currentRate.heartRate+" and min_heart_rate<="+currentRate.heartRate+";";
         $cordovaSQLite.execute(db, getCondition).then(function(data) {
             console.log(data);
             //if data ==null as in if the heart rate is beyond the max range
@@ -453,7 +465,7 @@ angular.module('starter', ['ionic', 'ngCordova'])
             }
         };
 
-        String smsContent = user+' may have some health issue as its pulse rate currently is '+currentRate.heartRate+' which needs attention. Please get in touch as soon as possible.\n Regards Heartistic';
+        var smsContent = user+' may have some health issue as its pulse rate currently is '+currentRate.heartRate+' which needs attention. Please get in touch as soon as possible.\n Regards Heartistic';
         $cordovaSms
           .send(''+contact1, smsContent, options)
           .then(function() {
