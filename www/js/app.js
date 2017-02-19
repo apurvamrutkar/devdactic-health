@@ -366,7 +366,6 @@ angular.module('starter', ['ionic', 'ngCordova'])
         alert(v);
     }
 
-<<<<<<< HEAD
     $scope.getCurrentHeartState = function(){
         var query = "Select * from HeartRateData order by timestamp DESC limit 1;";
         var currentRate;
@@ -475,8 +474,6 @@ angular.module('starter', ['ionic', 'ngCordova'])
         });
     }
 
-
-=======
     $scope.onSuccessStepCount = function (v) {
         var len = v.length;
         $scope.stepsData = v;
@@ -490,7 +487,6 @@ angular.module('starter', ['ionic', 'ngCordova'])
         alert(v);
     }
 
->>>>>>> 817178fdb66d78de2202744882a6bd7b3fee3bd0
     $scope.insertData = function () {
         var json = JSON.parse('[{"quantity":57,"endDate":"2017-02-18T12:00:02-05:00","startDate":"2017-02-18T12:00:02-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":72,"endDate":"2017-02-18T12:00:09-05:00","startDate":"2017-02-18T12:00:09-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:00:055-05:00","startDate":"2017-02-18T12:00:55-05:00","UUID":"70C2BA2A-BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}},{"quantity":57,"endDate":"2017-02-18T12:01:22-05:00","startDate":"2017-02-18T12:02:22-05:00","UUID":"70C2BA2A -BCB7-4176-B64E-841741A7B670","sourceBundleld":"com.apple.health. 6AF1A533-9B21-44E0- A11D-8B330AF86FC8","sourceName":"Abhishek Apple Watch","metadata":{}}]');
         var x = parseHeartData(json);
