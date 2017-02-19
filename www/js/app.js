@@ -4,17 +4,20 @@
 // 'starter' is the name of this angular module example (also set in a <body> attribute in index.html)
 // the 2nd parameter is an array of 'requires'
 var db = null;
+var name1 = 'Apurv';
+var contact1 = 3527459383;
+var name2 = 'Abhishek';
+var contact2 = 3528881397;
+var user = 'Keyur';
 angular.module('starter', ['ionic', 'ngCordova'])
 
 .run(function ($ionicPlatform, $cordovaHealthKit, $cordovaSQLite) {
     $ionicPlatform.ready(function () {
-
         //create database if not exist
         if (window.cordova) {
-          db = $cordovaSQLite.openDB({ name: "my.db" }); //device
-         console.log("IOS");
+          db = $cordovaSQLite.openDB({ name: 'my.db', location: 'default' }); //device
         }else{
-          db = window.openDatabase("my.db", '1', 'my', 1024 * 1024 * 100); // browser
+          db = window.openDatabase('my.db', '1', 'my', 1024 * 1024 * 100); // browser
           console.log("browser");
 
         }
@@ -40,16 +43,20 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
         db.transaction(function(tx) {
             var request = new XMLHttpRequest();
-           request.open("GET", "../heart_data.json", false);
-           request.send(null)
-           var data = JSON.parse(request.responseText);
-           for(var i=0;i<data.length;i++){
-                tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
-            }
+           request.open("GET", "heart_data.json", false);
+           request.send(null);
+           //$http.get("../heart_data.json").success(function (res) {
+            alert(request.responseText)
+               var data = sheet.sheet1;
+               alert(data[0]);
+               for(var i=0;i<data.length;i++){
+                    tx.executeSql('INSERT INTO heartRangeData VALUES (?,?,?,?,?,?,?)', [data[i].id,data[i].start_age,data[i].end_age,data[i].is_rest,data[i].max_heart_rate,data[i].min_heart_rate,data[i].state_no]);
+                }
+            //});
         }, function (error) {
             alert('Cannot insert into heartRangeData ERROR: ' + error.message);
         }, function () {
-            alert('inserted into table OK');
+            console.log('inserted into table OK');
         });
 
         var query = "Select * from heartRangeData LIMIT 10";
@@ -231,6 +238,8 @@ angular.module('starter', ['ionic', 'ngCordova'])
         return normalizedData;
     }
 
+
+
     function formatDateTime(date) {
         var c = new Date(date);
         c.setSeconds(0);
@@ -357,6 +366,114 @@ angular.module('starter', ['ionic', 'ngCordova'])
 
     $scope.onErrorHeartRate = function (v) {
         alert(v);
+    }
+
+    $scope.getCurrentHeartState = function(){
+        var query = "Select * from HeartRateData order by timestamp DESC limit 1;";
+        var currentRate;
+        $cordovaSQLite.execute(db, query).then(function(res) {
+          console.log(res);
+          currentRate = res;
+        }, function (err) {
+          console.error(err);
+        });  
+        var currentState;
+        var getCondition = "Select * from heartRangeData where start_age<="+24+" and end_age>="+24+" and is_rest="currentRate.isResting+" and max_heart_rate>="currentRate.heartRate+" and min_heart_rate<="+currentRate.heartRate";";
+        $cordovaSQLite.execute(db, getCondition).then(function(data) {
+            console.log(data);
+            //if data ==null as in if the heart rate is beyond the max range
+            //then it needs special attention
+            if(data==null || data.length==0){
+                return 'Need Attention';
+            }
+            currentState = data[0];
+
+        }, function(err){
+            alert("Some error occurred");
+        });  
+        var averageRateRest;
+        var avgCondition = "Select avg(heartRate) from HeartRateData where isResting=1 ;";
+        $cordovaSQLite.execute(db, avgCondition).then(function(data) {
+            console.log(data);
+            averageRateRest = data;            
+        }, function(err){
+            alert("Some error occurred");
+        });  
+        var averageRateWork;
+        avgCondition = "Select avg(heartRate) from HeartRateData where isResting=0 ;";
+        $cordovaSQLite.execute(db, avgCondition).then(function(data) {
+            console.log(data);
+            averageRateWork = data;            
+        }, function(err){
+            alert("Some error occurred");
+        });  
+
+        if(currentRate.isResting==0){
+            //now he is working out so if the the heart rate goes below the average of rest then it is outlier HeartRate
+            //which suggests there is some medical problem with the person working out
+            //as his heart is not even pumping as it used to pump during rest
+            if(currentRate.heartRate<averageRateRest){
+                //write function for calling Sending SMS
+                $scope.sendSms(currentRate.heartRate);
+                return 'Need Attention'
+            }else if(currentState.state_no<4){
+                return 'Good - Healthy';
+            }else if(currentState.state_no<6){
+                return 'Normal';
+            }else{
+                return 'Below - Normal';
+            }
+        }
+
+        if(currentRate.isResting==1){
+            //now he is resting so if the the heart rate goes above the average of workout then it is outlier HeartRate
+            //which suggests there is some medical problem with the person working out
+            //as his heart is not even pumping as it used to pump during rest
+            if(currentRate.heartRate>averageRateWork){
+                //write function for calling Sending SMS
+                sendSms(currentRate.heartRate);
+                return 'Need Attention'
+            }else if(currentState.state_no<4){
+                return 'Good - Healthy';
+            }else if(currentState.state_no<6){
+                return 'Normal';
+            }else{
+                return 'Below - Normal';
+            }
+        }
+           
+    }
+
+    $scope.sendSms = function(heartRate){
+        var options = {
+            replaceLineBreaks: false, // true to replace \n by a new line, false by default
+            android: {
+                intent: 'INTENT'  // send SMS with the native android SMS messaging
+                //intent: '' // send SMS without open any other app
+            }
+        };
+
+        String smsContent = user+' may have some health issue as its pulse rate currently is '+currentRate.heartRate+' which needs attention. Please get in touch as soon as possible.\n Regards Heartistic';
+        $cordovaSms
+          .send(''+contact1, smsContent, options)
+          .then(function() {
+            // Success! SMS was sent
+            alert('SMS to '+name1+' sent successfully.');
+          }, function(error) {
+            // An error occurred
+            alert('Unfortunately we could not send SMS to '+name1);
+        });
+
+
+        $cordovaSms
+          .send(''+contact2, smsContent, options)
+          .then(function() {
+            // Success! SMS was sent
+            alert('SMS to '+name2+' sent successfully.');
+          }, function(error) {
+            // An error occurred
+            alert('Unfortunately we could not send SMS to '+name2);
+        });
     }
 
     $scope.onSuccessStepCount = function (v) {
